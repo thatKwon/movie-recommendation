@@ -150,15 +150,15 @@ if __name__ == '__main__':
     movie_dict = load_movies_ndjson(movies_info)
 
     if USE_PICKLE:
-        user_means = load_pickle("user_means.pkl")
+        user_means = load_pickle("cf_user_means.pkl")
 
-        user_sim_topk = load_pickle("user_sim_topk.pkl")
+        user_sim_topk = load_pickle("cf_user_sim_topk.pkl")
     else:
         user_means = get_user_means(df)
-        save_pickle(user_means, "user_means.pkl")
+        save_pickle(user_means, "cf_user_means.pkl")
 
         user_sim_topk = get_user_sim_topk(df, TOP_K)
-        save_pickle(user_sim_topk, "user_sim_topk.pkl")
+        save_pickle(user_sim_topk, "cf_user_sim_topk.pkl")
 
     movie_ratings = get_movie_ratings_lookup(df)
 
