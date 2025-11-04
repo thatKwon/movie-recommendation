@@ -39,7 +39,7 @@ recommendations = cf.get_recommendations(user_id, TOP_N)
     },
     {
       "movie_id": 10002,
-      "predicted_rating": 9.8,
+      "predicted_rating": 8.8,
     },
   ]
 }
