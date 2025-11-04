@@ -19,7 +19,7 @@ class CfSystem:
 
         self.ratings = self.build_ratings_lookup(self.ratings_df)
 
-        self.user_means = None
+        self.user_means = self.build_user_means_lookup(self.ratings_df)
         self.user_sim_top = None
 
     @staticmethod
@@ -35,18 +35,14 @@ class CfSystem:
         self.top_k = top_k
 
         if use_pickle:
-            self.user_means = self.load_pickle("cf_user_means.pkl")
             self.user_sim_top = self.load_pickle("cf_user_sim_top.pkl")
         else:
-            self.user_means = self.build_user_means_lookup(self.ratings_df)
-            self.save_pickle(self.user_means, "cf_user_means.pkl")
-
             self.user_sim_top = self.get_user_sim(self.ratings_df, self.top_k)
             self.save_pickle(self.user_sim_top, "cf_user_sim_top.pkl")
 
 
     @staticmethod
-    def load_ratings(filepath="ratings.ndjson", limit=None) -> DataFrame:
+    def load_ratings(filepath="../data/ratings.ndjson", limit=None) -> DataFrame:
         records = []
         with open(filepath, 'r', encoding='utf-8') as f:
             for i, line in enumerate(f):
@@ -149,7 +145,7 @@ class CfSystem:
             recommendations.append((movie_id, predicted_rating))
 
         recommendations.sort(key=lambda x: x[1], reverse=True)
-        recommendations = recommendations[:self.top_n]
+        recommendations = recommendations[:top_n]
 
         # jsonfy
         recommendations_json = json.dumps({
@@ -164,14 +160,14 @@ class CfSystem:
 
 
 if __name__ == '__main__':
-    USE_PICKLE = True
+    USE_PICKLE = False
     TOP_K = 50
     TOP_N = 10
 
     cf = CfSystem()
     cf.initialize(top_k=TOP_K, use_pickle=USE_PICKLE)
 
-    def load_movies(filepath="movies.ndjson", limit=None):
+    def load_movies(filepath="../data/movies.ndjson", limit=None):
         movies = {}
         with open(filepath, 'r', encoding='utf-8') as f:
             for i, line in enumerate(f):
