@@ -160,7 +160,7 @@ class CfSystem:
 
 
 if __name__ == '__main__':
-    USE_PICKLE = False
+    USE_PICKLE = True
     TOP_K = 50
     TOP_N = 10
 
