@@ -1,22 +1,17 @@
 # Frontend
 
-
-
 # Backend
-
-
-
 
 # Database
 
-
-
 # Recommendation
+
 ## Baseline
 
 ## Content-based filtering
 
 ## Collaborative filtering
+
 ```
 from cf import CfSystem
 
@@ -29,8 +24,21 @@ TOP_N = 10
 cf = CfSystem()
 cf.initialize(TOP_K, USE_PICKLE)
 
-# get top n movie recommendations (top_n=10 as default)
+# get top n movie recommendations as json
 recommendations = cf.get_recommendations(user_id, TOP_N)
+```
+
+```
+# JSON
+{
+  "user_id": 1,
+  "recommendations": [
+    {
+      "movie_id": 10001,
+      "predicted_rating": 9.2,
+    },
+  ]
+}
 ```
 
 ## Deep learning based
