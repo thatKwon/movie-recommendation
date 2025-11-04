@@ -12,7 +12,7 @@
 
 ## Collaborative filtering
 
-```
+```python
 from cf import CfSystem
 
 # use cached value
@@ -28,7 +28,7 @@ cf.initialize(TOP_K, USE_PICKLE)
 recommendations = cf.get_recommendations(user_id, TOP_N)
 ```
 
-```
+```python
 # JSON
 {
   "user_id": 1,
