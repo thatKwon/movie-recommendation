@@ -17,13 +17,14 @@ class CfSystem:
         self.ratings_df = self.load_ratings()
         self.ratings_df = self.normalize_ratings(self.ratings_df)
 
-        self.user_ratings = self.build_user_ratings_lookup(self.ratings_df)
-        self.movie_ratings = self.build_movie_ratings_lookup(self.ratings_df)
+        self.user_ratings = self.build_user_ratings_lookup(self.ratings_df)     # 영화별 유저 별점
+        self.movie_ratings = self.build_movie_ratings_lookup(self.ratings_df)   # 유저별 영화 별점
 
-        self.user_means = self.build_user_means_lookup(self.ratings_df)
-        self.movie_means = self.build_movie_means_lookup(self.ratings_df)
-        self.user_sim_top = None
-        self.movie_sim_top = None
+        self.user_means = self.build_user_means_lookup(self.ratings_df)         # 유저의 평균 별점
+        self.movie_means = self.build_movie_means_lookup(self.ratings_df)       # 영화의 평균 별점
+
+        self.user_sim_top = None                                                # 유저 유사도 dict
+        self.movie_sim_top = None                                               # 영화 유사도 dict
 
     @staticmethod
     def save_pickle(obj, filepath):
@@ -69,6 +70,9 @@ class CfSystem:
         df = df.groupby(['user', 'movie'], as_index=False)['rate'].mean()
         df['rate_mean'] = df.groupby('user')['rate'].transform('mean')
         df['rate_centered'] = df['rate'] - df['rate_mean']
+
+        # df['rate_mean_movie'] = df.groupby('movie')['rate'].transform('mean')
+        # df['rate_centered_movie'] = df['rate'] - df['rate_mean_movie']
         return df
 
     @staticmethod
@@ -113,6 +117,7 @@ class CfSystem:
             }
 
         return sim_top
+
     @staticmethod
     def get_movie_sim(df, top_k) -> dict:
         ratings_mat = df.pivot(index='movie', columns='user', values='rate_centered').fillna(0.0)
@@ -128,6 +133,7 @@ class CfSystem:
 
             top_i = np.argpartition(row, -top_k)[-top_k:]
             top_i = top_i[np.argsort(-row[top_i])]
+
             sim_top[mid] = {
                 "neighbors": movie_ids[top_i],
                 "sims": row[top_i]
@@ -136,11 +142,11 @@ class CfSystem:
 
     @staticmethod
     def get_user_predicted_rating(user_id, movie_id, sim_top, user_means, ratings) -> float:
-        neighbors = sim_top[user_id]['neighbors']
-        sims = sim_top[user_id]['sims']
-
         if movie_id not in ratings:
             return user_means[user_id]
+
+        neighbors = sim_top[user_id]['neighbors']
+        sims = sim_top[user_id]['sims']
 
         movie_ratings = ratings[movie_id]
         numerator = 0.0
@@ -159,27 +165,31 @@ class CfSystem:
         predicted_rating = user_means[user_id] + numerator / denominator
         return max(1.0, min(10.0, predicted_rating))
 
-    def get_movie_predicted_rating(self, user_id, movie_id) -> float:
-        if movie_id not in self.item_sim_top:
-            return self.user_means.get(user_id, 5.0)
+    @staticmethod
+    def get_movie_predicted_rating(user_id, movie_id, sim_top, user_means, movie_means, ratings) -> float:
+        if movie_id not in sim_top:
+            return user_means[user_id]
 
-        neighbors = self.item_sim_top[movie_id]['neighbors']
-        sims = self.item_sim_top[movie_id]['sims']
+        neighbors = sim_top[movie_id]['neighbors']
+        sims = sim_top[movie_id]['sims']
 
+        user_ratings = ratings[user_id]
         numerator = 0.0
         denominator = 0.0
 
         for other_movie, sim in zip(neighbors, sims):
-            if other_movie in self.user_ratings[user_id]:
-                centered_rating = self.user_ratings[user_id][other_movie]
-                numerator += sim * centered_rating
-                denominator += abs(sim)
+            r = user_ratings.get(other_movie)
+            if r is None:
+                continue
+            numerator += sim * r
+            denominator += abs(sim)
 
-        if denominator == 0:
-            return self.user_means[user_id]
+        if denominator == 0.0:
+            return user_means[user_id]
 
-        predicted = self.user_means[user_id] + numerator / denominator
-        return max(1.0, min(10.0, predicted))
+        predicted_rating = user_means[user_id] + numerator / denominator
+        return predicted_rating
+        # return max(1.0, min(10.0, predicted_rating))
 
 
     def get_recommendations(self, user_id, top_n=10, movie_limit=300) -> str:
@@ -219,24 +229,32 @@ class CfSystem:
         return recommendations_json
 
     def get_movie_recommendations(self, user_id, top_n=10) -> str:
-        if user_id not in self.user_ratings:
-            return json.dumps({"user_id": user_id, "recommendations": []})
+        if user_id not in self.user_sim_top:
+            return json.dumps({
+                "user_id": user_id,
+                "recommendations": []
+            })
 
-        watched_movies = set(self.user_ratings[user_id].keys())
+        watched_by_user = set(self.ratings_df[self.ratings_df['user'] == user_id]['movie'])
 
-        # ✅ 후보 영화 = 사용자가 본 영화들에 유사한 영화들의 집합
+        movie_rating = self.movie_ratings[user_id]
+        liked_by_user = [m for m, r in movie_rating.items() if r > 0]
+
         candidate_movies = set()
-        for m in watched_movies:
-            if m in self.item_sim_top:
-                candidate_movies.update(self.item_sim_top[m]['neighbors'])
+        for m in liked_by_user:
+            if m in self.movie_sim_top:
+                candidate_movies.update(self.movie_sim_top[m]['neighbors'])
+        candidate_movies = [m for m in candidate_movies if m not in watched_by_user]
 
-        # 이미 본 영화 제거
-        candidate_movies = [m for m in candidate_movies if m not in watched_movies]
+        movie_count = self.ratings_df['movie'].value_counts()
 
         recommendations = []
         for movie_id in candidate_movies:
-            score = self.get_movie_predicted_rating(user_id, movie_id)
-            recommendations.append((movie_id, score))
+            if movie_count.get(movie_id, 0) < 20:
+                continue
+
+            predicted_rating = self.get_movie_predicted_rating(user_id, movie_id, self.movie_sim_top, self.user_means, self.movie_means, self.movie_ratings)
+            recommendations.append((movie_id, predicted_rating))
 
         recommendations.sort(key=lambda x: x[1], reverse=True)
         recommendations = recommendations[:top_n]
@@ -244,14 +262,14 @@ class CfSystem:
         return json.dumps({
             "user_id": user_id,
             "recommendations": [
-                {"movie_id": mid, "predicted_rating": round(score, 1)}
+                {"movie_id": int(mid), "predicted_rating": float(round(score, 1))}
                 for mid, score in recommendations
             ]
         })
 
 
 if __name__ == '__main__':
-    USE_PICKLE = False
+    USE_PICKLE = True
     TOP_K = 50
     TOP_N = 10
 
@@ -294,8 +312,8 @@ if __name__ == '__main__':
             break
 
         user_id = int(user_input)
-        # recommendations_json = cf.get_recommendations(user_id, TOP_N)
-        # display_movie_info(movies_df, recommendations_json)
-
-        recommendations_json = cf.get_movie_recommendations(user_id, TOP_N)
+        recommendations_json = cf.get_recommendations(user_id, TOP_N)
         display_movie_info(movies_df, recommendations_json)
+
+        # recommendations_json = cf.get_movie_recommendations(user_id)
+        # display_movie_info(movies_df, recommendations_json)
