@@ -1,0 +1,205 @@
+{
+  "user_id": 52,
+  "recommendations": [
+    {
+      "movie_id": 97612,
+      "predicted_rating": 5.106283187866211
+    },
+    {
+      "movie_id": 82432,
+      "predicted_rating": 4.936300277709961
+    },
+    {
+      "movie_id": 87311,
+      "predicted_rating": 4.49672269821167
+    },
+    {
+      "movie_id": 107306,
+      "predicted_rating": 4.49326229095459
+    },
+    {
+      "movie_id": 52245,
+      "predicted_rating": 4.470056056976318
+    },
+    {
+      "movie_id": 70393,
+      "predicted_rating": 4.427688121795654
+    },
+    {
+      "movie_id": 158610,
+      "predicted_rating": 4.35922384262085
+    },
+    {
+      "movie_id": 86843,
+      "predicted_rating": 4.310839653015137
+    },
+    {
+      "movie_id": 66751,
+      "predicted_rating": 4.234643936157227
+    },
+    {
+      "movie_id": 51689,
+      "predicted_rating": 4.136781215667725
+    },
+    {
+      "movie_id": 137971,
+      "predicted_rating": 4.133339881896973
+    },
+    {
+      "movie_id": 51462,
+      "predicted_rating": 4.129376411437988
+    },
+    {
+      "movie_id": 85870,
+      "predicted_rating": 4.108588695526123
+    },
+    {
+      "movie_id": 78825,
+      "predicted_rating": 4.078121662139893
+    },
+    {
+      "movie_id": 77768,
+      "predicted_rating": 4.074151515960693
+    },
+    {
+      "movie_id": 47370,
+      "predicted_rating": 4.070209503173828
+    },
+    {
+      "movie_id": 81834,
+      "predicted_rating": 4.069097518920898
+    },
+    {
+      "movie_id": 82283,
+      "predicted_rating": 4.0663275718688965
+    },
+    {
+      "movie_id": 53152,
+      "predicted_rating": 4.0578227043151855
+    },
+    {
+      "movie_id": 116234,
+      "predicted_rating": 4.045244216918945
+    },
+    {
+      "movie_id": 119632,
+      "predicted_rating": 4.044065475463867
+    },
+    {
+      "movie_id": 78838,
+      "predicted_rating": 4.034342288970947
+    },
+    {
+      "movie_id": 60530,
+      "predicted_rating": 4.02961540222168
+    },
+    {
+      "movie_id": 69689,
+      "predicted_rating": 4.028358459472656
+    },
+    {
+      "movie_id": 136869,
+      "predicted_rating": 4.015979290008545
+    },
+    {
+      "movie_id": 74820,
+      "predicted_rating": 4.013556003570557
+    },
+    {
+      "movie_id": 16571,
+      "predicted_rating": 4.003651142120361
+    },
+    {
+      "movie_id": 151728,
+      "predicted_rating": 3.993440628051758
+    },
+    {
+      "movie_id": 158626,
+      "predicted_rating": 3.9891176223754883
+    },
+    {
+      "movie_id": 53307,
+      "predicted_rating": 3.9783594608306885
+    },
+    {
+      "movie_id": 134963,
+      "predicted_rating": 3.9641506671905518
+    },
+    {
+      "movie_id": 62266,
+      "predicted_rating": 3.9415173530578613
+    },
+    {
+      "movie_id": 38444,
+      "predicted_rating": 3.940553903579712
+    },
+    {
+      "movie_id": 104331,
+      "predicted_rating": 3.9390926361083984
+    },
+    {
+      "movie_id": 70453,
+      "predicted_rating": 3.9359192848205566
+    },
+    {
+      "movie_id": 74610,
+      "predicted_rating": 3.92221999168396
+    },
+    {
+      "movie_id": 80465,
+      "predicted_rating": 3.9120702743530273
+    },
+    {
+      "movie_id": 51786,
+      "predicted_rating": 3.900142192840576
+    },
+    {
+      "movie_id": 124212,
+      "predicted_rating": 3.894289970397949
+    },
+    {
+      "movie_id": 100676,
+      "predicted_rating": 3.882181167602539
+    },
+    {
+      "movie_id": 86507,
+      "predicted_rating": 3.8457016944885254
+    },
+    {
+      "movie_id": 65197,
+      "predicted_rating": 3.8397891521453857
+    },
+    {
+      "movie_id": 75474,
+      "predicted_rating": 3.839606285095215
+    },
+    {
+      "movie_id": 156083,
+      "predicted_rating": 3.8341104984283447
+    },
+    {
+      "movie_id": 80629,
+      "predicted_rating": 3.767791271209717
+    },
+    {
+      "movie_id": 62328,
+      "predicted_rating": 3.733909845352173
+    },
+    {
+      "movie_id": 52120,
+      "predicted_rating": 3.7305545806884766
+    },
+    {
+      "movie_id": 100203,
+      "predicted_rating": 3.728447914123535
+    },
+    {
+      "movie_id": 80466,
+      "predicted_rating": 3.719961166381836
+    },
+    {
+      "movie_id": 115622,
+      "predicted_rating": 3.7167716026306152
+    }
+  ]
+}
