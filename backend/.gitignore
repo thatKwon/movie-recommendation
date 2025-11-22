@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment variables (SECRETS - Do not upload!)
+.env
+.env.*
+
+# Build & Cache
+dist/
+build/
+.cache/
+.npm/
+.eslintcache
+
+# Logs
+*.log
+npm-debug.log*
+
+# System Files
+.DS_Store
