@@ -120,19 +120,122 @@ const searchWithRecommendation = async (userId, query, userPreferences = {}) => 
     }
 
     // Fallback logic: Perform a standard text search if the recommendation service fails or is disabled.
-    const dbQuery = { $text: { $search: query } };
-    if (prefs.genres.length > 0) dbQuery.genres = { $in: prefs.genres };
-
-    let fallbackMovies = await Movie.find(dbQuery)
-      .sort({ score: { $meta: 'textScore' }, likeCount: -1, viewCount: -1 })
-      .limit(20);
-
-    // If still no results, try TMDB as a last resort
-    if (fallbackMovies.length === 0) {
-      fallbackMovies = await searchMoviesOnTMDB(query);
+    console.log(`🔍 Performing text search with query: "${query}"`);
+    
+    let fallbackMovies;
+    
+    // 1. 텍스트 검색 시도 (기존 로직)
+    try {
+      const dbQuery = { $text: { $search: query } };
+      if (prefs.genres.length > 0) {
+        dbQuery.genres = { $in: prefs.genres };
+      }
+      
+      fallbackMovies = await Movie.find(dbQuery)
+        .sort({ score: { $meta: 'textScore' }, likeCount: -1, viewCount: -1 })
+        .limit(50);
+      
+      console.log(`📊 Text search found ${fallbackMovies.length} movies`);
+    } catch (textSearchError) {
+      console.log('⚠️  Text search failed, trying genre-based search...', textSearchError.message);
+      fallbackMovies = [];
     }
 
-    return fallbackMovies.map(movie => ({ ...(movie.toObject ? movie.toObject() : movie), relevanceScore: 0.5 }));
+    // 2. 텍스트 검색 결과가 없으면 장르 기반 검색
+    if (fallbackMovies.length === 0 && prefs.genres && prefs.genres.length > 0) {
+      console.log(`📊 Fetching movies from preferred genres: ${prefs.genres.join(', ')}`);
+      fallbackMovies = await Movie.find({ genres: { $in: prefs.genres } })
+        .sort({ voteAverage: -1, likeCount: -1, viewCount: -1 })
+        .limit(50);
+    }
+
+    // 3. 여전히 결과가 없으면 인기 영화 가져오기
+    if (fallbackMovies.length === 0) {
+      console.log(`📊 Fetching popular movies as fallback`);
+      fallbackMovies = await Movie.find()
+        .sort({ voteAverage: -1, likeCount: -1, viewCount: -1 })
+        .limit(50);
+    }
+
+    console.log(`📊 Found ${fallbackMovies.length} candidate movies`);
+
+    // 4. 최후의 수단으로 TMDB 검색
+    if (fallbackMovies.length === 0) {
+      console.log('⚠️  No movies in DB, trying TMDB...');
+      fallbackMovies = await searchMoviesOnTMDB(query);
+      console.log(`📊 TMDB search found ${fallbackMovies.length} movies`);
+    }
+
+    let movies = fallbackMovies.map(movie => ({ ...(movie.toObject ? movie.toObject() : movie), relevanceScore: 0.5 }));
+    console.log(`📦 Total movies before AI filtering: ${movies.length}`);
+
+    // 🎯 AI 필터링: 검색 결과를 LLM으로 세부 필터링
+    if (process.env.AI_SERVICE_URL && movies.length > 0) {
+      try {
+        console.log(`🤖 Calling AI Service to filter ${movies.length} movies for search query...`);
+        
+        // 영화 데이터를 AI 서비스 포맷으로 변환
+        const moviesForAI = movies.map(movie => ({
+          id: movie._id.toString(),
+          tmdbId: movie.tmdbId,
+          title: movie.title,
+          year: movie.year,
+          genres: movie.genres || [],
+          plot: movie.plot || '',
+          voteAverage: movie.voteAverage || 0,
+          runtime: movie.runtime || 0,
+          rating: movie.rating || '',
+          cast: movie.cast || [],
+          directors: movie.directors || [],
+          relevanceScore: movie.relevanceScore || 0,
+          likeCount: movie.likeCount || 0,
+          viewCount: movie.viewCount || 0
+        }));
+
+        const aiResponse = await axios.post(
+          `${process.env.AI_SERVICE_URL}/api/filter-movies`,
+          {
+            query: query,
+            movies: moviesForAI,
+            maxResults: 10,
+            lightweightResponse: true,
+            minScoreThreshold: 0.5
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 15000 // 15초 타임아웃
+          }
+        );
+
+        if (aiResponse.data?.movies && aiResponse.data.movies.length > 0) {
+          const aiFilteredMovies = aiResponse.data.movies;
+          console.log(`✅ AI filtered to ${aiFilteredMovies.length} movies`);
+          
+          // movieId 기반으로 원본 영화 데이터와 매핑
+          const aiMoviesMap = new Map(aiFilteredMovies.map(item => [item.movieId, item.aiReason]));
+          
+          // AI가 선택한 영화만 필터링하고 aiReason 추가
+          movies = movies
+            .filter(movie => aiMoviesMap.has(movie._id.toString()))
+            .map(movie => ({
+              ...movie,
+              aiReason: aiMoviesMap.get(movie._id.toString())
+            }));
+          
+          console.log(`🎬 Final movies with AI reasons: ${movies.length}`);
+        }
+      } catch (aiError) {
+        console.error('❌ AI Service call failed:', {
+          url: `${process.env.AI_SERVICE_URL}/api/filter-movies`,
+          status: aiError.response?.status,
+          message: aiError.message
+        });
+        console.log('⚠️  Continuing without AI filtering...');
+        // AI 필터링 실패 시에도 기존 검색 결과 반환
+      }
+    }
+
+    return movies;
 
   } catch (error) {
     console.error('Search with recommendation error:', error);
