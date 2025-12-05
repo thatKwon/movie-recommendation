@@ -26,13 +26,7 @@ const getUserHistory = async (userId) => {
 
   // Perform queries in parallel for better performance
   const [likes, recentClicks] = await Promise.all([
-    Like.find({ userId }).populate({
-      path: 'targetId',
-      // Dynamically select the model based on the targetType of each document
-      model: function(doc) {
-        return doc.targetType;
-      }
-    }),
+    Like.find({ userId }).populate('targetId'), // refPath in schema handles dynamic reference
     Click.find({ userId }).sort({ clickedAt: -1 }).limit(50).populate('movieId')
   ]);
 
@@ -118,48 +112,28 @@ const searchWithRecommendation = async (userId, query, userPreferences = {}) => 
         console.log('Falling back to standard database search.');
       }
     }
-
-    // Fallback logic: Perform a standard text search if the recommendation service fails or is disabled.
-    console.log(`🔍 Performing text search with query: "${query}"`);
+    // Fallback logic: Get movies from DB for AI filtering
+    console.log(`🔍 Loading movies for AI filtering with query: "${query}"`);
     
     let fallbackMovies;
     
-    // 1. 텍스트 검색 시도 (기존 로직)
-    try {
-      const dbQuery = { $text: { $search: query } };
-      if (prefs.genres.length > 0) {
-        dbQuery.genres = { $in: prefs.genres };
-      }
-      
-      fallbackMovies = await Movie.find(dbQuery)
-        .sort({ score: { $meta: 'textScore' }, likeCount: -1, viewCount: -1 })
-        .limit(50);
-      
-      console.log(`📊 Text search found ${fallbackMovies.length} movies`);
-    } catch (textSearchError) {
-      console.log('⚠️  Text search failed, trying genre-based search...', textSearchError.message);
-      fallbackMovies = [];
-    }
-
-    // 2. 텍스트 검색 결과가 없으면 장르 기반 검색
-    if (fallbackMovies.length === 0 && prefs.genres && prefs.genres.length > 0) {
+    // 1. 사용자 선호 장르가 있으면 해당 장르 영화 가져오기
+    if (prefs.genres && prefs.genres.length > 0) {
       console.log(`📊 Fetching movies from preferred genres: ${prefs.genres.join(', ')}`);
       fallbackMovies = await Movie.find({ genres: { $in: prefs.genres } })
         .sort({ voteAverage: -1, likeCount: -1, viewCount: -1 })
         .limit(50);
-    }
-
-    // 3. 여전히 결과가 없으면 인기 영화 가져오기
-    if (fallbackMovies.length === 0) {
-      console.log(`📊 Fetching popular movies as fallback`);
+    } else {
+      // 2. 선호 장르가 없으면 인기 영화 가져오기
+      console.log(`📊 Fetching popular movies`);
       fallbackMovies = await Movie.find()
         .sort({ voteAverage: -1, likeCount: -1, viewCount: -1 })
         .limit(50);
     }
 
-    console.log(`📊 Found ${fallbackMovies.length} candidate movies`);
+    console.log(`📊 Found ${fallbackMovies.length} candidate movies for AI filtering`);
 
-    // 4. 최후의 수단으로 TMDB 검색
+    // If still no results, try TMDB as a last resort
     if (fallbackMovies.length === 0) {
       console.log('⚠️  No movies in DB, trying TMDB...');
       fallbackMovies = await searchMoviesOnTMDB(query);
@@ -350,12 +324,7 @@ const getPopulatedUserLikes = async (userId) => {
   }
   const userLikes = await Like.find({ userId })
     .sort({ createdAt: -1 }) // Show most recently liked items first
-    .populate({
-      path: 'targetId',
-      model: function(doc) {
-        return doc.targetType;
-      },
-    });
+    .populate('targetId'); // refPath in schema handles dynamic reference
 
   // Filter out any likes where the underlying movie/actor/director may have been deleted
   return userLikes.filter(like => like.targetId);
